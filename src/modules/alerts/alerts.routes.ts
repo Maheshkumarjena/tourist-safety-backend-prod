@@ -1,74 +1,22 @@
-import { Router } from 'express';
-import Joi from 'joi';
-import {
-    createSOSAlert,
-    getAlertHistory,
-    getAlertById,
-    updateAlertStatus,
-    addAlertMedia,
-} from './alerts.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { validate, validateParams } from '@/middleware/validate.middleware';
-import { sosLimiter } from '@/middleware/rateLimit.middleware';
+import express from 'express';
+import { AlertController } from './alerts.controller';
+import { authenticate } from '../../middleware/auth.middleware';
 
-const router = Router();
+const router = express.Router();
 
-// Validation schemas
-const sosAlertSchema = Joi.object({
-    coordinates: Joi.object({
-        latitude: Joi.number().min(-90).max(90).required(),
-        longitude: Joi.number().min(-180).max(180).required(),
-    }).required(),
-    accuracy: Joi.number().min(0).optional(),
-    message: Joi.string().max(500).optional(),
-    media: Joi.array().items(
-        Joi.object({
-            type: Joi.string().valid('image', 'video', 'audio').required(),
-            url: Joi.string().uri().required(),
-            thumbnail: Joi.string().uri().optional(),
-            duration: Joi.number().min(0).optional(),
-        })
-    ).optional(),
-    additionalData: Joi.object({
-        batteryLevel: Joi.number().min(0).max(100).optional(),
-        networkType: Joi.string().valid('wifi', 'cellular', 'none', 'unknown').optional(),
-        nearbyWifi: Joi.array().items(Joi.string()).optional(),
-        audioRecording: Joi.string().uri().optional(),
-    }).optional(),
-});
+// All routes require authentication
+router.use(authenticate);
 
-const statusUpdateSchema = Joi.object({
-    status: Joi.string().valid('active', 'resolved', 'cancelled', 'false_alarm').required(),
-    notes: Joi.string().max(1000).optional(),
-});
+// Create panic alert
+router.post('/panic', AlertController.panic);
 
-const mediaSchema = Joi.object({
-    media: Joi.array().items(
-        Joi.object({
-            type: Joi.string().valid('image', 'video', 'audio').required(),
-            url: Joi.string().uri().required(),
-            thumbnail: Joi.string().uri().optional(),
-            duration: Joi.number().min(0).optional(),
-        })
-    ).min(1).required(),
-});
+// Get alert summary
+router.get('/tourist-summary', AlertController.getSummary);
 
-const alertParamsSchema = Joi.object({
-    id: Joi.string().hex().length(24).required(),
-});
+// Get alert history
+router.get('/history', AlertController.getHistory);
 
-const historyQuerySchema = Joi.object({
-    status: Joi.string().valid('active', 'resolved', 'cancelled', 'false_alarm').optional(),
-    type: Joi.string().valid('sos', 'geofence', 'inactivity', 'manual', 'system').optional(),
-    limit: Joi.number().min(1).max(100).default(20),
-    page: Joi.number().min(1).default(1),
-});
-
-// Routes
-router.post('/panic', authenticate, sosLimiter, validate(sosAlertSchema), createSOSAlert);
-router.get('/history', authenticate, validate(historyQuerySchema), getAlertHistory);
-router.get('/:id', authenticate, validateParams(alertParamsSchema), getAlertById);
-router.patch('/:id/status', authenticate, validateParams(alertParamsSchema), validate(statusUpdateSchema), updateAlertStatus);
-router.post('/:id/media', authenticate, validateParams(alertParamsSchema), validate(mediaSchema), addAlertMedia);
+// Get safety score (mock AI endpoint)
+router.get('/safety-score', AlertController.getSafetyScore);
 
 export default router;

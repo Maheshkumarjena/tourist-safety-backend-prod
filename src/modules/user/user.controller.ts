@@ -1,249 +1,148 @@
-import { Request, Response } from 'express';
-import { asyncHandler } from '@/middleware/error.middleware';
-import { AuthRequest } from '@/middleware/auth.middleware';
-import User from './user.model';
-import { AppError } from '@/middleware/error.middleware';
+import { Request, Response, NextFunction } from 'express';
+import Joi from 'joi';
+import { UserService } from './user.service';
+import { UpdateProfileRequest, UpdateEmergencyContactsRequest, UpdateSettingsRequest } from './user.types';
+import { validate } from '../../middleware/validate.middleware';
+import { AuthRequest } from '../../middleware/auth.middleware';
 
-/**
- * @desc    Update user profile
- * @route   PUT /api/v1/user/profile
- * @access  Private
- */
-export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const {
-    firstName,
-    lastName,
-    dateOfBirth,
-    nationality,
-    profileImage,
-    settings,
-  } = req.body;
-
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      ...(firstName && { firstName }),
-      ...(lastName && { lastName }),
-      ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-      ...(nationality && { nationality }),
-      ...(profileImage && { profileImage }),
-      ...(settings && { settings: { ...req.user.settings, ...settings } }),
-    },
-    { new: true, runValidators: true }
-  );
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Profile updated successfully',
-    data: {
-      user,
-    },
-  });
+// Validation schemas
+const updateProfileSchema = Joi.object({
+  kycDetails: Joi.object({
+    documentType: Joi.string().valid('aadhaar', 'passport', 'driver-license').required(),
+    documentNumber: Joi.string().required(),
+    documentImage: Joi.string().optional()
+  }).optional(),
+  tripItineraries: Joi.array().items(
+    Joi.object({
+      destination: Joi.string().required(),
+      startDate: Joi.date().required(),
+      endDate: Joi.date().required().greater(Joi.ref('startDate')),
+      accommodation: Joi.string().required(),
+      activities: Joi.array().items(Joi.string()).optional()
+    })
+  ).optional()
 });
 
-/**
- * @desc    Get user profile
- * @route   GET /api/v1/user/profile
- * @access  Private
- */
-export const getProfile = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const user = await User.findById(req.user._id);
-
-  res.status(200).json({
-    success: true,
-    data: {
-      user,
-    },
-  });
+const emergencyContactsSchema = Joi.object({
+  contacts: Joi.array().items(
+    Joi.object({
+      name: Joi.string().required(),
+      phone: Joi.string().required(),
+      email: Joi.string().email().required(),
+      relationship: Joi.string().required()
+    })
+  ).required()
 });
 
-/**
- * @desc    Add or update emergency contacts
- * @route   PUT /api/v1/user/emergency-contacts
- * @access  Private
- */
-export const updateEmergencyContacts = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { emergencyContacts } = req.body;
-
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { emergencyContacts },
-    { new: true, runValidators: true }
-  );
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Emergency contacts updated successfully',
-    data: {
-      emergencyContacts: user.emergencyContacts,
-    },
-  });
+const settingsSchema = Joi.object({
+  settings: Joi.object({
+    trackingEnabled: Joi.boolean().optional(),
+    notificationsEnabled: Joi.boolean().optional(),
+    language: Joi.string().optional(),
+    emergencyAlertContacts: Joi.boolean().optional()
+  }).required()
 });
 
-/**
- * @desc    Get emergency contacts
- * @route   GET /api/v1/user/emergency-contacts
- * @access  Private
- */
-export const getEmergencyContacts = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const user = await User.findById(req.user._id).select('emergencyContacts');
+export class UserController {
+  // Get user profile
+  static getProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const profile = await UserService.getProfile(userId);
 
-  res.status(200).json({
-    success: true,
-    data: {
-      emergencyContacts: user?.emergencyContacts || [],
-    },
-  });
-});
+      res.status(200).json({
+        status: 'success',
+        data: profile
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-/**
- * @desc    Update user settings
- * @route   PUT /api/v1/user/settings
- * @access  Private
- */
-export const updateSettings = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { settings } = req.body;
+  // Update user profile
+  static updateProfile = [
+    validate(updateProfileSchema),
+    async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        const userId = req.user.id;
+        const profileData: UpdateProfileRequest = req.body;
+        const profile = await UserService.updateProfile(userId, profileData);
 
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { settings: { ...req.user.settings, ...settings } },
-    { new: true }
-  );
+        res.status(200).json({
+          status: 'success',
+          data: profile
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  ];
 
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
+  // Get current trip
+  static getCurrentTrip = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const currentTrip = await UserService.getCurrentTrip(userId);
 
-  res.status(200).json({
-    success: true,
-    message: 'Settings updated successfully',
-    data: {
-      settings: user.settings,
-    },
-  });
-});
+      res.status(200).json({
+        status: 'success',
+        data: currentTrip
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-/**
- * @desc    Get user settings
- * @route   GET /api/v1/user/settings
- * @access  Private
- */
-export const getSettings = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const user = await User.findById(req.user._id).select('settings');
+  // Update emergency contacts
+  static updateEmergencyContacts = [
+    validate(emergencyContactsSchema),
+    async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        const userId = req.user.id;
+        const contactsData: UpdateEmergencyContactsRequest = req.body;
+        const contacts = await UserService.updateEmergencyContacts(userId, contactsData);
 
-  res.status(200).json({
-    success: true,
-    data: {
-      settings: user?.settings || {},
-    },
-  });
-});
+        res.status(200).json({
+          status: 'success',
+          data: contacts
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  ];
 
-/**
- * @desc    Submit KYC documents
- * @route   POST /api/v1/user/kyc
- * @access  Private
- */
-export const submitKyc = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { kycDocuments } = req.body;
+  // Get emergency contacts
+  static getEmergencyContacts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const contacts = await UserService.getEmergencyContacts(userId);
 
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      kycDocuments,
-      kycStatus: 'pending'
-    },
-    { new: true, runValidators: true }
-  );
+      res.status(200).json({
+        status: 'success',
+        data: contacts
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
+  // Update user settings
+  static updateSettings = [
+    validate(settingsSchema),
+    async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        const userId = req.user.id;
+        const settingsData: UpdateSettingsRequest = req.body;
+        const settings = await UserService.updateSettings(userId, settingsData);
 
-  res.status(200).json({
-    success: true,
-    message: 'KYC documents submitted successfully',
-    data: {
-      kycStatus: user.kycStatus,
-      kycDocuments: user.kycDocuments,
-    },
-  });
-});
-
-/**
- * @desc    Add itinerary item
- * @route   POST /api/v1/user/itinerary
- * @access  Private
- */
-export const addItineraryItem = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const itineraryItem = req.body;
-
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { $push: { itinerary: itineraryItem } },
-    { new: true, runValidators: true }
-  );
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Itinerary item added successfully',
-    data: {
-      itinerary: user.itinerary,
-    },
-  });
-});
-
-/**
- * @desc    Get itinerary
- * @route   GET /api/v1/user/itinerary
- * @access  Private
- */
-export const getItinerary = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const user = await User.findById(req.user._id).select('itinerary');
-
-  res.status(200).json({
-    success: true,
-    data: {
-      itinerary: user?.itinerary || [],
-    },
-  });
-});
-
-/**
- * @desc    Delete itinerary item
- * @route   DELETE /api/v1/user/itinerary/:itemId
- * @access  Private
- */
-export const deleteItineraryItem = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { itemId } = req.params;
-
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { $pull: { itinerary: { _id: itemId } } },
-    { new: true }
-  );
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Itinerary item deleted successfully',
-    data: {
-      itinerary: user.itinerary,
-    },
-  });
-});
+        res.status(200).json({
+          status: 'success',
+          data: settings
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  ];
+}

@@ -1,109 +1,99 @@
-import mongoose, { Schema, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-export interface ILocation extends Document {
-  userId: Types.ObjectId;
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
+export interface Point {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
+export interface ILocationRecord extends Document {
+  userId: mongoose.Types.ObjectId;
+  coordinates: Point;
+  timestamp: Date;
   accuracy?: number;
   altitude?: number;
   speed?: number;
-  heading?: number;
-  timestamp: Date;
-  batteryLevel?: number;
-  isMoving?: boolean;
-  activityType?: string;
-  geofenceId?: string;
-  locationType: 'ping' | 'sos' | 'checkpoint';
-  metadata?: {
-    wifiSSID?: string;
-    cellTowerId?: string;
-    ipAddress?: string;
-    countryCode?: string;
-  };
+  createdAt: Date;
 }
 
-const locationSchema = new Schema<ILocation>(
-  {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
+export interface IZone extends Document {
+  name: string;
+  type: 'safe' | 'risky' | 'restricted';
+  coordinates: Point[];
+  riskLevel: 'low' | 'medium' | 'high';
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Location Record Schema
+const locationRecordSchema = new Schema<ILocationRecord>({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  coordinates: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true
     },
     coordinates: {
-      latitude: {
-        type: Number,
-        required: true,
-        min: -90,
-        max: 90,
-      },
-      longitude: {
-        type: Number,
-        required: true,
-        min: -180,
-        max: 180,
-      },
-    },
-    accuracy: {
-      type: Number,
-      min: 0,
-    },
-    altitude: {
-      type: Number,
-    },
-    speed: {
-      type: Number,
-      min: 0,
-    },
-    heading: {
-      type: Number,
-      min: 0,
-      max: 360,
-    },
-    timestamp: {
-      type: Date,
-      required: true,
-      default: Date.now,
-    },
-    batteryLevel: {
-      type: Number,
-      min: 0,
-      max: 100,
-    },
-    isMoving: {
-      type: Boolean,
-      default: false,
-    },
-    activityType: {
-      type: String,
-      enum: ['stationary', 'walking', 'running', 'cycling', 'driving', 'unknown'],
-      default: 'unknown',
-    },
-    geofenceId: {
-      type: String,
-    },
-    locationType: {
-      type: String,
-      enum: ['ping', 'sos', 'checkpoint'],
-      default: 'ping',
-    },
-    metadata: {
-      wifiSSID: String,
-      cellTowerId: String,
-      ipAddress: String,
-      countryCode: String,
-    },
+      type: [Number],
+      required: true
+    }
   },
-  {
-    timestamps: true,
-  }
-);
+  timestamp: {
+    type: Date,
+    required: true,
+    default: Date.now
+  },
+  accuracy: Number,
+  altitude: Number,
+  speed: Number
+}, {
+  timestamps: true
+});
 
-// Create geospatial index for location queries
-locationSchema.index({ coordinates: '2dsphere' });
-locationSchema.index({ userId: 1, timestamp: -1 });
-locationSchema.index({ timestamp: 1 }, { expireAfterSeconds: 2592000 }); // Auto-delete after 30 days
+// Create geospatial index for efficient location queries
+locationRecordSchema.index({ coordinates: '2dsphere' });
+locationRecordSchema.index({ userId: 1, timestamp: -1 });
 
-export default mongoose.model<ILocation>('Location', locationSchema);
+// Zone Schema
+const zoneSchema = new Schema<IZone>({
+  name: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  type: {
+    type: String,
+    enum: ['safe', 'risky', 'restricted'],
+    required: true
+  },
+  coordinates: [{
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true
+    },
+    coordinates: {
+      type: [Number],
+      required: true
+    }
+  }],
+  riskLevel: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    required: true
+  },
+  description: String
+}, {
+  timestamps: true
+});
+
+// Create geospatial index for zones
+zoneSchema.index({ coordinates: '2dsphere' });
+
+export const LocationRecord = mongoose.model<ILocationRecord>('LocationRecord', locationRecordSchema);
+export const Zone = mongoose.model<IZone>('Zone', zoneSchema);

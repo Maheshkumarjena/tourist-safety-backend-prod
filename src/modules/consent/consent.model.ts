@@ -1,74 +1,52 @@
-import mongoose, { Schema, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IConsent extends Document {
-  userId: Types.ObjectId;
-  type: 'privacy_policy' | 'terms_of_service' | 'location_tracking' | 'data_processing';
+  userId: mongoose.Types.ObjectId;
+  type: 'tracking' | 'notifications' | 'data_collection' | 'emergency_contacts';
+  granted: boolean;
+  timestamp: Date;
+  expiresAt?: Date;
+  purpose: string;
   version: string;
-  accepted: boolean;
-  acceptedAt: Date;
-  ipAddress: string;
-  userAgent: string;
-  language: string;
-  metadata?: {
-    deviceId?: string;
-    appVersion?: string;
-    location?: string;
-  };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const consentSchema = new Schema<IConsent>(
-  {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
-    },
-    type: {
-      type: String,
-      enum: ['privacy_policy', 'terms_of_service', 'location_tracking', 'data_processing'],
-      required: true,
-    },
-    version: {
-      type: String,
-      required: true,
-    },
-    accepted: {
-      type: Boolean,
-      required: true,
-    },
-    acceptedAt: {
-      type: Date,
-      required: true,
-      default: Date.now,
-    },
-    ipAddress: {
-      type: String,
-      required: true,
-    },
-    userAgent: {
-      type: String,
-      required: true,
-    },
-    language: {
-      type: String,
-      required: true,
-      default: 'en',
-    },
-    metadata: {
-      deviceId: String,
-      appVersion: String,
-      location: String,
-    },
+const consentSchema = new Schema<IConsent>({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  {
-    timestamps: true,
+  type: {
+    type: String,
+    enum: ['tracking', 'notifications', 'data_collection', 'emergency_contacts'],
+    required: true
+  },
+  granted: {
+    type: Boolean,
+    required: true
+  },
+  timestamp: {
+    type: Date,
+    required: true,
+    default: Date.now
+  },
+  expiresAt: Date,
+  purpose: {
+    type: String,
+    required: true
+  },
+  version: {
+    type: String,
+    required: true
   }
-);
+}, {
+  timestamps: true
+});
 
-// Indexes for better query performance
-consentSchema.index({ userId: 1, type: 1 });
-consentSchema.index({ userId: 1, acceptedAt: -1 });
-consentSchema.index({ type: 1, version: 1 });
+// Index for better query performance
+consentSchema.index({ userId: 1, type: 1, timestamp: -1 });
+consentSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for auto-deletion
 
-export default mongoose.model<IConsent>('Consent', consentSchema);
+export const Consent = mongoose.model<IConsent>('Consent', consentSchema);

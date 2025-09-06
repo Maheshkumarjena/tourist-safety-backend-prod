@@ -1,43 +1,19 @@
-import { Router } from 'express';
-import Joi from 'joi';
-import {
-    recordConsent,
-    getConsentHistory,
-    getConsentStatus,
-    getConsentRequirements,
-} from './consent.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { validate, validateQuery } from '@/middleware/validate.middleware';
+import express from 'express';
+import { ConsentController } from './consent.controller';
+import { authenticate } from '../../middleware/auth.middleware';
 
-const router = Router();
+const router = express.Router();
 
-// Validation schemas
-const consentSchema = Joi.object({
-    type: Joi.string()
-        .valid('privacy_policy', 'terms_of_service', 'location_tracking', 'data_processing')
-        .required(),
-    version: Joi.string().required(),
-    accepted: Joi.boolean().required(),
-    language: Joi.string().default('en'),
-    metadata: Joi.object({
-        deviceId: Joi.string().optional(),
-        appVersion: Joi.string().optional(),
-        location: Joi.string().optional(),
-    }).optional(),
-});
+// All routes require authentication
+router.use(authenticate);
 
-const historyQuerySchema = Joi.object({
-    type: Joi.string()
-        .valid('privacy_policy', 'terms_of_service', 'location_tracking', 'data_processing')
-        .optional(),
-    limit: Joi.number().min(1).max(100).default(20),
-    page: Joi.number().min(1).default(1),
-});
+// Get consent history
+router.get('/history', ConsentController.getHistory);
 
-// Routes
-router.post('/', authenticate, validate(consentSchema), recordConsent);
-router.get('/history', authenticate, validateQuery(historyQuerySchema), getConsentHistory);
-router.get('/status', authenticate, getConsentStatus);
-router.get('/requirements', getConsentRequirements);
+// Record consent
+router.post('/record', ConsentController.recordConsent);
+
+// Revoke consent
+router.post('/revoke', ConsentController.revokeConsent);
 
 export default router;

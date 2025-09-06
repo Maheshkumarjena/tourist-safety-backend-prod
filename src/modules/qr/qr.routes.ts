@@ -1,23 +1,15 @@
-import { Router } from 'express';
-import Joi from 'joi';
-import {
-    generateQRCode,
-    verifyQRCode,
-    getVerificationStatus,
-} from './qr.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { validate } from '@/middleware/validate.middleware';
+import express from 'express';
+import { QRController } from './qr.controller';
 
-const router = Router();
+const router = express.Router();
 
-// Validation schemas
-const verifySchema = Joi.object({
-    qrData: Joi.string().required(),
-});
+// Issue mock digital ID
+router.post('/issue-id', QRController.issueID);
 
-// Routes
-router.get('/generate', authenticate, generateQRCode);
-router.post('/verify', validate(verifySchema), verifyQRCode);
-router.get('/status', authenticate, getVerificationStatus);
+// Get QR code by ID
+router.get('/qr/:id', QRController.getQRCode);
+
+// Verify QR code
+router.post('/verify', QRController.verifyQR);
 
 export default router;

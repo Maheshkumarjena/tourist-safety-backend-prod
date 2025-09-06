@@ -1,154 +1,69 @@
-import { Request, Response } from 'express';
-import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { asyncHandler } from '@/middleware/error.middleware';
-import { AuthRequest } from '@/middleware/auth.middleware';
-import { AppError } from '@/middleware/error.middleware';
-import { config } from '@/config/env';
-import { logger } from '@/config/logger';
+import { Request, Response, NextFunction } from 'express';
+import { MediaService } from './media.service';
+import { uploadSingle } from '../../utils/uploader';
+import { AuthRequest } from '../../middleware/auth.middleware';
+import { AppError } from '../../utils/appError';
 
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
+export class MediaController {
+  // Upload media file
+  static upload = [
+    uploadSingle('media'),
+    async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+      try {
+        if (!req.file) {
+          throw new AppError('No file uploaded', 400);
+        }
 
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (config.appSettings.allowedFileTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new AppError(`File type ${file.mimetype} is not allowed`, 400));
-  }
-};
+        const userId = req.user.id;
+        const alertId = req.body.alertId;
 
-export const upload = multer({
-  storage,
-  limits: {
-    fileSize: config.appSettings.maxFileSize,
-  },
-  fileFilter,
-});
+        const fileInfo = await MediaService.uploadFile(req.file, userId, alertId);
 
-/**
- * @desc    Upload media file
- * @route   POST /api/v1/media/upload
- * @access  Private
- */
-export const uploadMedia = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.file) {
-    throw new AppError('No file uploaded', 400);
-  }
+        res.status(201).json({
+          status: 'success',
+          data: fileInfo
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  ];
 
-  const file = req.file;
-  const fileType = getFileType(file.mimetype);
-  const fileName = `${uuidv4()}-${Date.now()}.${getFileExtension(file.originalname)}`;
+  // Get media file
+  static getFile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { filename } = req.params;
 
-  // For MVP, we'll store files locally
-  // In production, this would upload to AWS S3 or similar service
-  const fileUrl = await saveFileLocally(file, fileName);
+      const fileInfo = await MediaService.getFile(filename);
 
-  res.status(200).json({
-    success: true,
-    message: 'File uploaded successfully',
-    data: {
-      file: {
-        type: fileType,
-        url: fileUrl,
-        originalName: file.originalname,
-        size: file.size,
-        mimeType: file.mimetype,
-        uploadedAt: new Date(),
-      },
-    },
-  });
-});
+      res.setHeader('Content-Type', fileInfo.mimetype);
+      res.setHeader('Content-Length', fileInfo.size);
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
-/**
- * @desc    Upload multiple media files
- * @route   POST /api/v1/media/upload-multiple
- * @access  Private
- */
-export const uploadMultipleMedia = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-    throw new AppError('No files uploaded', 400);
-  }
-
-  const uploadResults = await Promise.all(
-    (req.files as Express.Multer.File[]).map(async (file) => {
-      const fileType = getFileType(file.mimetype);
-      const fileName = `${uuidv4()}-${Date.now()}.${getFileExtension(file.originalname)}`;
-      const fileUrl = await saveFileLocally(file, fileName);
-
-      return {
-        type: fileType,
-        url: fileUrl,
-        originalName: file.originalname,
-        size: file.size,
-        mimeType: file.mimetype,
-        uploadedAt: new Date(),
-      };
-    })
-  );
-
-  res.status(200).json({
-    success: true,
-    message: 'Files uploaded successfully',
-    data: {
-      files: uploadResults,
-    },
-  });
-});
-
-// Helper functions
-const getFileType = (mimeType: string): string => {
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType.startsWith('video/')) return 'video';
-  if (mimeType.startsWith('audio/')) return 'audio';
-  return 'other';
-};
-
-const getFileExtension = (filename: string): string => {
-  return filename.split('.').pop()?.toLowerCase() || 'bin';
-};
-
-const saveFileLocally = async (file: Express.Multer.File, filename: string): Promise<string> => {
-  // For MVP, save files to local storage
-  // In production, integrate with AWS S3, Google Cloud Storage, etc.
-
-  const fs = require('fs').promises;
-  const path = require('path');
-
-  const uploadDir = path.join(process.cwd(), 'uploads');
-
-  try {
-    await fs.access(uploadDir);
-  } catch {
-    await fs.mkdir(uploadDir, { recursive: true });
-  }
-
-  const filePath = path.join(uploadDir, filename);
-  await fs.writeFile(filePath, file.buffer);
-
-  return `/uploads/${filename}`;
-};
-
-// For production S3 integration (commented out for MVP)
-/*
-const uploadToS3 = async (file: Express.Multer.File, filename: string): Promise<string> => {
-  const AWS = require('aws-sdk');
-  
-  const s3 = new AWS.S3({
-    accessKeyId: config.awsAccessKeyId,
-    secretAccessKey: config.awsSecretAccessKey,
-    region: config.awsRegion,
-  });
-  
-  const params = {
-    Bucket: config.s3BucketName,
-    Key: filename,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-    ACL: 'public-read',
+      // Stream the file
+      const fs = require('fs');
+      const readStream = fs.createReadStream(fileInfo.path);
+      readStream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
   };
-  
-  const result = await s3.upload(params).promise();
-  return result.Location;
-};
-*/
+
+  // Delete media file
+  static deleteFile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { filename } = req.params;
+      const userId = req.user.id;
+
+      // In a real implementation, you would check if the user owns this file
+      await MediaService.deleteFile(filename);
+
+      res.status(200).json({
+        status: 'success',
+        message: 'File deleted successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}

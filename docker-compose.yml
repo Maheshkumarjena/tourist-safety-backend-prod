@@ -7,17 +7,11 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/tourist_safety
-      - REDIS_URL=redis://redis:6379
+      - MONGODB_URI=mongodb://mongo:27017/tourist-safety-db
+      - JWT_SECRET=your-production-jwt-secret
     depends_on:
       - mongo
-      - redis
-    volumes:
-      - ./uploads:/app/uploads
-      - ./logs:/app/logs
     restart: unless-stopped
-    networks:
-      - tourist-safety-network
 
   mongo:
     image: mongo:6
@@ -26,25 +20,7 @@ services:
     volumes:
       - mongo_data:/data/db
     environment:
-      - MONGO_INITDB_DATABASE=tourist_safety
-    networks:
-      - tourist-safety-network
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - tourist-safety-network
-    restart: unless-stopped
+      - MONGO_INITDB_DATABASE=tourist-safety-db
 
 volumes:
   mongo_data:
-  redis_data:
-
-networks:
-  tourist-safety-network:
-    driver: bridge
