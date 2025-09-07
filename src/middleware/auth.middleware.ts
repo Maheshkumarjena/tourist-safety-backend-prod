@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '../modules/user/user.model';
-import { AppError } from '../utils/appError';
+import { User } from '../modules/auth/auth.model'; // Corrected import (was '../modules/user/user.model')import { AppError } from '../utils/appError';
 import { logger } from '../config/logger';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -22,7 +24,7 @@ export const authenticate = async (
     }
 
     if (!token) {
-      throw new AppError('Access denied. No token provided.', 401);
+      throw new Error('Access denied. No token provided.', 401);
     }
 
     // Verify token
@@ -32,14 +34,14 @@ export const authenticate = async (
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
-      throw new AppError('User no longer exists.', 401);
+      throw new Error('User no longer exists.', 401);
     }
 
     req.user = user;
     next();
   } catch (error) {
     logger.error('Authentication error:', error);
-    next(new AppError('Invalid token.', 401));
+    next(new Error('Invalid token.', 401));
   }
 };
 

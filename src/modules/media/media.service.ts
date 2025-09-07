@@ -26,8 +26,25 @@ export class MediaService {
       const filename = `media-${userId}-${uniqueSuffix}${fileExtension}`;
       const filePath = path.join(uploadDir, filename);
 
-      // Move file to upload directory
-      fs.renameSync(file.path, filePath);
+      // Check if the source file exists before moving it
+      if (!fs.existsSync(file.path)) {
+        throw new AppError('Uploaded file not found', 400);
+      }
+
+      // Move file to upload directory using copy + delete instead of rename
+      // This is more reliable across different filesystems
+      const readStream = fs.createReadStream(file.path);
+      const writeStream = fs.createWriteStream(filePath);
+
+      await new Promise((resolve, reject) => {
+        readStream.pipe(writeStream);
+        readStream.on('error', reject);
+        writeStream.on('error', reject);
+        writeStream.on('finish', resolve);
+      });
+
+      // Delete the temporary file created by multer
+      fs.unlinkSync(file.path);
 
       // Construct URL for accessing the file
       const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
@@ -43,6 +60,16 @@ export class MediaService {
       };
     } catch (error) {
       logger.error('File upload error:', error);
+
+      // Clean up temporary file if it exists
+      if (file?.path && fs.existsSync(file.path)) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (unlinkError) {
+          logger.warn('Could not clean up temporary file:', unlinkError);
+        }
+      }
+
       throw new AppError('Failed to upload file', 500);
     }
   }

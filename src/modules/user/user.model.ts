@@ -39,6 +39,10 @@ export interface IUserProfile extends Document {
   updatedAt: Date;
 }
 
+
+
+
+
 const emergencyContactSchema = new Schema<EmergencyContact>({
   name: { type: String, required: true },
   phone: { type: String, required: true },

@@ -1,21 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import { MediaService } from './media.service';
-import { uploadSingle } from '../../utils/uploader';
 import { AuthRequest } from '../../middleware/auth.middleware';
 import { AppError } from '../../utils/appError';
+import { upload } from '../../utils/uploader';
 
 export class MediaController {
   // Upload media file
   static upload = [
-    uploadSingle('media'),
+    upload.single('media'), // Use directly
     async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
+        console.log('Inside MediaController.upload');
         if (!req.file) {
           throw new AppError('No file uploaded', 400);
         }
 
         const userId = req.user.id;
         const alertId = req.body.alertId;
+
+        console.log('Uploading file for user ID:', userId);
+        console.log('Alert ID:', alertId);
 
         const fileInfo = await MediaService.uploadFile(req.file, userId, alertId);
 

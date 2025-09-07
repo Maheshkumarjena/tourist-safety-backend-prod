@@ -48,13 +48,14 @@ export class UserController {
   static getProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user.id;
+      console.log('Fetching profile for user ID:', userId);
       const profile = await UserService.getProfile(userId);
 
       res.status(200).json({
         status: 'success',
         data: profile
       });
-    } catch (error) {
+    } catch (error) { 
       next(error);
     }
   };

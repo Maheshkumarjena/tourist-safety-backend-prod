@@ -7,11 +7,26 @@ import { logger } from '../../config/logger';
 export class UserService {
   // Get user profile
   static async getProfile(userId: string): Promise<IUserProfile> {
-    const profile = await UserProfile.findOne({ userId }).populate('userId', 'firstName lastName email phoneNumber');
+    console.log('UserService.getProfile called with userId:', userId);
+    let profile = await UserProfile.findOne({ userId }).populate('userId', 'firstName lastName email phoneNumber');
 
     if (!profile) {
-      throw new AppError('Profile not found', 404);
+      // Create default profile if not found (fallback)
+      profile = new UserProfile({
+        userId,
+        emergencyContacts: [],
+        settings: {
+          trackingEnabled: true,
+          notificationsEnabled: true,
+          language: 'en',
+          emergencyAlertContacts: true
+        }
+      });
+      await profile.save();
+      profile = await UserProfile.findOne({ userId }).populate('userId', 'firstName lastName email phoneNumber');
     }
+
+  
 
     return profile;
   }

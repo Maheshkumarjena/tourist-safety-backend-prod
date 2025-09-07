@@ -6,7 +6,15 @@ import { AppError } from './appError';
 // Configure storage
 const storage = multer.diskStorage({
     destination: (req: Request, file: Express.Multer.File, cb) => {
-        cb(null, process.env.UPLOAD_PATH || './uploads');
+        const uploadDir = process.env.UPLOAD_PATH || './uploads';
+
+        // Ensure directory exists
+        const fs = require('fs');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        cb(null, uploadDir);
     },
     filename: (req: Request, file: Express.Multer.File, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -34,13 +42,3 @@ export const upload = multer({
         fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760') // 10MB default
     }
 });
-
-// Middleware for single file upload
-export const uploadSingle = (fieldName: string) => {
-    return upload.single(fieldName);
-};
-
-// Middleware for multiple file upload
-export const uploadMultiple = (fieldName: string, maxCount: number = 5) => {
-    return upload.array(fieldName, maxCount);
-};

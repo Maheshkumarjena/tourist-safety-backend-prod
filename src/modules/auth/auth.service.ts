@@ -3,6 +3,7 @@ import { RegisterRequest, LoginRequest, VerifyOtpRequest, AuthResponse } from '.
 import { generateToken } from '../../utils/jwt';
 import { AppError } from '../../utils/appError';
 import { logger } from '../../config/logger';
+import { UserProfile } from '../user/user.model';
 
 export class AuthService {
   // Register a new user
@@ -30,6 +31,20 @@ export class AuthService {
     user.otpExpires = otpExpires;
 
     await user.save();
+
+    const defaultProfile = new UserProfile({
+      userId: user._id,
+      emergencyContacts: [],  // Default empty array
+      settings: {
+        trackingEnabled: true,
+        notificationsEnabled: true,
+        language: 'en',
+        emergencyAlertContacts: true
+      },
+      // Add any other default fields if needed (e.g., tripItineraries: [])
+    });
+    await defaultProfile.save();
+    
 
     // Log OTP (in production, send via SMS/email)
     logger.info(`OTP for ${user.email}: ${otp}`);
