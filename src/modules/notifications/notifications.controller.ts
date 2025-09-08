@@ -5,6 +5,7 @@ import { AuthRequest } from '../../middleware/auth.middleware';
 export class NotificationController {
   // Get user notifications
   static getNotifications = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    console.log('Fetching notifications for user:', req.user.id);
     try {
       const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 20;

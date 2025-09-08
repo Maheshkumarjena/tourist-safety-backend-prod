@@ -42,3 +42,13 @@ export const upload = multer({
         fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760') // 10MB default
     }
 });
+
+// Middleware for single file upload with form data
+export const uploadSingleWithFields = () => {
+    return upload.single('media');
+};
+
+// Middleware for multiple file upload with form data  
+export const uploadMultipleWithFields = (maxCount: number = 5) => {
+    return upload.array('media', maxCount);
+};
