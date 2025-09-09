@@ -3,6 +3,8 @@ import { PanicAlertRequest, SafetyScore as SafetyScoreType } from './alerts.type
 import { UserProfile } from '../user/user.model';
 import { AppError } from '../../utils/appError';
 import { logger } from '../../config/logger';
+import { AIService } from '../ai/ai.service';
+
 
 export class AlertService {
   // Create a panic alert
@@ -34,6 +36,24 @@ export class AlertService {
 
     // Mock notification to authorities
     logger.info(`Notifying authorities about panic alert from user ${userId}`);
+
+    try {
+      const aiAnalysis = await AIService.generatePredictiveAlerts({
+        location: alertData.coordinates,
+        timeOfDay: this.getTimeOfDay(),
+        dayOfWeek: this.getDayOfWeek(),
+        historicalData: [] // Would fetch real historical data in production
+      });
+
+      // Store AI insights with the alert
+      alert.set('aiInsights', aiAnalysis);
+      await alert.save();
+
+      logger.info(`AI analysis for alert ${alert._id}: ${aiAnalysis.message}`);
+    } catch (error) {
+      logger.error('AI analysis failed:', error);
+    }
+
 
     return alert;
   }
@@ -138,5 +158,20 @@ export class AlertService {
       factors: safetyScore.factors,
       lastUpdated: safetyScore.lastUpdated
     };
+  }
+
+
+
+  private static getTimeOfDay(): string {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    return 'night';
+  }
+
+  private static getDayOfWeek(): string {
+    const day = new Date().getDay();
+    return day >= 1 && day <= 5 ? 'weekday' : 'weekend';
   }
 }

@@ -17,6 +17,15 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import qrRoutes from './modules/qr/qr.routes';
 import consentRoutes from './modules/consent/consent.routes';
 import offlineRoutes from './modules/offline/offline.routes';
+// ... existing imports ...
+import adminRoutes from './modules/admin/admin.routes';
+import aiRoutes from './modules/ai/ai.routes';
+
+// ... existing code ...
+ // New AI service routes
+
+// ... rest of the code ...
+
 
 const app = express();
 
@@ -53,16 +62,18 @@ app.use((req, res, next) => {
 swaggerSetup(app);
 
 // API routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/user', userRoutes);
-app.use('/api/v1/location', locationRoutes);
-app.use('/api/v1/alerts', alertsRoutes);
-app.use('/api/v1/media', mediaRoutes);
-app.use('/api/v1/notifications', notificationsRoutes);
-app.use('/api/v1/blockchain', qrRoutes); // QR routes under blockchain path
-app.use('/api/v1/consent', consentRoutes);
-app.use('/api/v1/offline', offlineRoutes);
-app.use('/api/v1/ai', alertsRoutes); // AI routes under alerts
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/location', locationRoutes);
+app.use('/api/alerts', alertsRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/blockchain', qrRoutes); // QR routes under blockchain path
+app.use('/api/consent', consentRoutes);
+app.use('/api/offline', offlineRoutes);
+app.use('/api/ai', alertsRoutes); // AI routes under alerts
+app.use('/api/admin', adminRoutes);
+app.use('/api/ai-service', aiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
