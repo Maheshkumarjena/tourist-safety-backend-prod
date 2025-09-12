@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { AuthService } from './auth.service';
-import { RegisterRequest, LoginRequest, VerifyOtpRequest } from './auth.types';
+import { RegisterRequest, LoginRequest } from './auth.types';
 import { validate } from '../../middleware/validate.middleware';
 import { AppError } from '../../utils/appError';
 
@@ -64,20 +64,5 @@ export class AuthController {
   ];
 
   // Verify OTP
-  static verifyOtp = [
-    validate(verifyOtpSchema),
-    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-      try {
-        const otpData: VerifyOtpRequest = req.body;
-        const result = await AuthService.verifyOtp(otpData);
 
-        res.status(200).json({
-          status: 'success',
-          data: result
-        });
-      } catch (error) {
-        next(error);
-      }
-    }
-  ];
 }

@@ -11,8 +11,8 @@ export interface IUser extends Document {
   nationality: string;
   role: 'tourist' | 'authority' | 'admin';
   isVerified: boolean;
-  otp?: string;
-  otpExpires?: Date;
+  otp?: string; // Removed OTP related fields
+  otpExpires?: Date; // Removed OTP related fields
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -64,8 +64,8 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
-  otp: String,
-  otpExpires: Date
+  otp: String, // Removed OTP related fields
+  otpExpires: Date // Removed OTP related fields
 }, {
   timestamps: true
 });

@@ -13,7 +13,6 @@ router.post('/register', AuthController.register);
 // Login user
 router.post('/login', AuthController.login);
 
-// Verify OTP
-router.post('/verify-otp', AuthController.verifyOtp);
+
 
 export default router;

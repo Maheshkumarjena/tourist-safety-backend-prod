@@ -23,12 +23,7 @@ export class AuthService {
       role: 'tourist' // Default role for registration
     });
 
-    // Generate OTP (mock implementation)
-    const otp = '123456'; // In production, generate a random 6-digit number
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    user.otp = otp;
-    user.otpExpires = otpExpires;
 
     await user.save();
 
@@ -46,8 +41,7 @@ export class AuthService {
     await defaultProfile.save();
     
 
-    // Log OTP (in production, send via SMS/email)
-    logger.info(`OTP for ${user.email}: ${otp}`);
+
 
     // Generate token
     const token = generateToken({ id: user._id });
@@ -74,10 +68,7 @@ export class AuthService {
       throw new AppError('Invalid email or password', 401);
     }
 
-    // Check if user is verified
-    if (!user.isVerified) {
-      throw new AppError('Please verify your account first', 401);
-    }
+
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
@@ -101,25 +92,5 @@ export class AuthService {
   }
 
   // Verify OTP
-  static async verifyOtp(otpData: VerifyOtpRequest): Promise<{ message: string }> {
-    const { email, otp } = otpData;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    // Check if OTP matches and is not expired
-    if (user.otp !== otp || !user.otpExpires || user.otpExpires < new Date()) {
-      throw new AppError('Invalid or expired OTP', 400);
-    }
-
-    // Mark user as verified and clear OTP
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
-
-    return { message: 'Account verified successfully' };
-  }
 }

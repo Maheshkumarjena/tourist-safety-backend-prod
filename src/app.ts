@@ -44,7 +44,7 @@ app.use(limiter);
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
         ? ['https://your-production-domain.com']
-        : ['http://localhost:3000', 'http://localhost:3001'],
+        : ['http://localhost:8080', 'http://localhost:3001'],
     credentials: true,
 }));
 
@@ -62,18 +62,18 @@ app.use((req, res, next) => {
 swaggerSetup(app);
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/location', locationRoutes);
-app.use('/api/alerts', alertsRoutes);
-app.use('/api/media', mediaRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api/blockchain', qrRoutes); // QR routes under blockchain path
-app.use('/api/consent', consentRoutes);
-app.use('/api/offline', offlineRoutes);
-app.use('/api/ai', alertsRoutes); // AI routes under alerts
-app.use('/api/admin', adminRoutes);
-app.use('/api/ai-service', aiRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/location', locationRoutes);
+app.use('/api/v1/alerts', alertsRoutes);
+app.use('/api/v1/media', mediaRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/blockchain', qrRoutes); // QR routes under blockchain path
+app.use('/api/v1/consent', consentRoutes);
+app.use('/api/v1/offline', offlineRoutes);
+app.use('/api/v1/ai', alertsRoutes); // AI routes under alerts
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/ai-service', aiRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
