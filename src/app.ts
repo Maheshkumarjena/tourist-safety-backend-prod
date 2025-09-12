@@ -6,6 +6,8 @@ import { errorHandler } from './middleware/error.middleware';
 import { notFoundHandler } from './middleware/notFound.middleware';
 import { logger } from './config/logger';
 import { swaggerSetup } from './config/swagger';
+import { initSocket } from './config/socket';
+
 
 // Import routes
 import authRoutes from './modules/auth/auth.routes';
@@ -29,6 +31,8 @@ import aiRoutes from './modules/ai/ai.routes';
 
 const app = express();
 
+app.use(initSocket); // Initialize Socket.io
+
 // Security middleware
 app.use(helmet());
 
@@ -44,7 +48,7 @@ app.use(limiter);
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
         ? ['https://your-production-domain.com']
-        : ['http://localhost:3000', 'http://localhost:3001'],
+        : ['http://localhost:8080', 'http://localhost:3001'],
     credentials: true,
 }));
 

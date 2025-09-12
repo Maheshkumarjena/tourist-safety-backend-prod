@@ -4,8 +4,8 @@
   "description": "Smart Tourist Safety Monitoring & Incident Response System Backend",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
     "start": "node dist/server.js",
+    "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -24,7 +24,9 @@
     "mongoose": "^7.5.0",
     "multer": "^1.4.5-lts.1",
     "qrcode": "^1.5.3",
+    "socket.io": "^4.8.1",
     "swagger-ui-express": "^4.6.3",
+    "uuid": "^13.0.0",
     "winston": "^3.10.0"
   },
   "devDependencies": {

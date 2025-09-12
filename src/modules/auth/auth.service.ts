@@ -86,8 +86,11 @@ export class AuthService {
     }
 
     // Generate token
-    const token = generateToken({ id: user._id });
-
+    const token = generateToken({
+      id: user._id,
+      role: user.role // User role
+    });
+    
     return {
       token,
       user: {
