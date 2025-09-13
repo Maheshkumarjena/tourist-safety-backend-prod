@@ -3,6 +3,7 @@ import { UpdateProfileRequest, UpdateEmergencyContactsRequest, UpdateSettingsReq
 import { AppError } from '../../utils/appError';
 import QRCode from 'qrcode';
 import { logger } from '../../config/logger';
+import { AlertService } from '../alerts/alerts.service';
 
 export class UserService {
   // Get user profile
@@ -29,6 +30,12 @@ export class UserService {
   
 
     return profile;
+  }
+
+  // Get safety score for a user by delegating to AlertService
+  static async getSafetyScore(userId: string) {
+    // Reuse existing alert service logic for safety score
+    return await AlertService.getSafetyScore(userId);
   }
 
   // Update user profile

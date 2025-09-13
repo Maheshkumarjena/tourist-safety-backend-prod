@@ -25,4 +25,7 @@ router.get('/emergency-contacts', UserController.getEmergencyContacts);
 // Update user settings
 router.post('/settings', UserController.updateSettings);
 
+// Get safety score (reuses alerts/AI mock logic)
+router.get('/safety-score', UserController.getSafetyScore);
+
 export default router;

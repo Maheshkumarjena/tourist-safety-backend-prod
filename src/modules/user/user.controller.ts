@@ -146,4 +146,19 @@ export class UserController {
       }
     }
   ];
+
+  // Get safety score (delegates to UserService)
+  static getSafetyScore = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const safetyScore = await UserService.getSafetyScore(userId);
+
+      res.status(200).json({
+        status: 'success',
+        data: safetyScore
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
