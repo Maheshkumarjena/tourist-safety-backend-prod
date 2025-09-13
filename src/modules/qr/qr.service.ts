@@ -4,40 +4,65 @@ import QRCode from 'qrcode';
 import { AppError } from '../../utils/appError';
 import { logger } from '../../config/logger';
 
+// Import blockchain interaction
+const { mintUser } = require('../../blockchain/interaction_hash');
+
 export class QRService {
-  // Issue a mock digital ID
+  // Issue a true blockchain digital ID (mint NFT if not present)
   static async issueDigitalID(issueData: IssueIDRequest): Promise<DigitalID> {
-    // Check if digital ID already exists for this user
-    const existingID = await DigitalIDModel.findOne({ userId: issueData.userId });
-    if (existingID) {
+    // Check if digital ID already exists for this user (with blockchainHash)
+    let existingID = await DigitalIDModel.findOne({ userId: issueData.userId });
+    if (existingID && existingID.blockchainHash) {
       return {
         userId: existingID.userId.toString(),
         idData: existingID.idData,
         expiryDate: existingID.expiryDate,
-        qrCode: existingID.qrCode
+        qrCode: existingID.qrCode,
+        blockchainHash: existingID.blockchainHash
       };
+    }
+
+    // Mint on blockchain (use idData as unique hash input)
+    let blockchainHash;
+    try {
+      const mintResult = await mintUser(issueData.idData, 'active', '');
+      // The hash is deterministic from idData, so store it
+      const { ethers } = require('ethers');
+      blockchainHash = ethers.keccak256(ethers.toUtf8Bytes(issueData.idData));
+    } catch (err) {
+      logger.error('Blockchain minting failed:', err);
+      throw new AppError('Blockchain minting failed', 500);
     }
 
     // Generate QR code
     const qrCode = await QRCode.toDataURL(issueData.idData);
 
-    // Create digital ID
-    const digitalID = new DigitalIDModel({
-      userId: issueData.userId,
-      idData: issueData.idData,
-      expiryDate: issueData.expiryDate,
-      qrCode
-    });
+    // Create or update digital ID
+    if (existingID) {
+      existingID.blockchainHash = blockchainHash;
+      existingID.qrCode = qrCode;
+      existingID.idData = issueData.idData;
+      existingID.expiryDate = issueData.expiryDate;
+      await existingID.save();
+    } else {
+      existingID = new DigitalIDModel({
+        userId: issueData.userId,
+        idData: issueData.idData,
+        expiryDate: issueData.expiryDate,
+        qrCode,
+        blockchainHash
+      });
+      await existingID.save();
+    }
 
-    await digitalID.save();
-
-    logger.info(`Mock digital ID issued for user ${issueData.userId}`);
+    logger.info(`Blockchain digital ID issued for user ${issueData.userId}`);
 
     return {
-      userId: digitalID.userId.toString(),
-      idData: digitalID.idData,
-      expiryDate: digitalID.expiryDate,
-      qrCode: digitalID.qrCode
+      userId: existingID.userId.toString(),
+      idData: existingID.idData,
+      expiryDate: existingID.expiryDate,
+      qrCode: existingID.qrCode,
+      blockchainHash: existingID.blockchainHash
     };
   }
 

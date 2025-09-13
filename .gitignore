@@ -2,6 +2,7 @@
 # -----------------------------------------------------------------------------
 # NEVER commit sensitive information. This includes environment variables,
 # API keys, and credentials.
+node_modules
 .env
 .env.local
 .env.production
@@ -15,7 +16,6 @@ secrets.json
 # -----------------------------------------------------------------------------
 # Ignore the directories where package managers store dependencies.
 # This prevents huge amounts of code from being committed to the repo.
-node_modules/       # Node.js
 vendor/             # PHP/Composer
 target/             # Rust, Java
 build/              # General build output

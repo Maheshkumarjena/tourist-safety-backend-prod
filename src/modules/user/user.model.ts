@@ -105,6 +105,7 @@ export interface IDigitalID extends Document {
   idData: string;
   expiryDate: Date;
   qrCode: string;
+  blockchainHash?: string; // Blockchain user hash
   createdAt: Date;
   updatedAt: Date;
 }
@@ -118,7 +119,8 @@ const digitalIDSchema = new Schema<IDigitalID>({
   },
   idData: { type: String, required: true },
   expiryDate: { type: Date, required: true },
-  qrCode: { type: String, required: true }
+  qrCode: { type: String, required: true },
+  blockchainHash: { type: String, required: false, unique: true, sparse: true }
 }, {
   timestamps: true
 });

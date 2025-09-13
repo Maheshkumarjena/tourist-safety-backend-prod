@@ -1,3 +1,5 @@
+    // Static admin code verification
+    
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { AdminService } from './admin.service';
@@ -51,6 +53,20 @@ export class AdminController {
             }
         }
     ];
+
+
+    static async verifyCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { code } = req.body;
+            if (code === 'ADMIN2024') {
+                res.status(200).json({ status: 'success', valid: true });
+            } else {
+                res.status(401).json({ status: 'fail', valid: false, message: 'Invalid code' });
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
 
     // Login admin
     static login = [

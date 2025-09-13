@@ -79,6 +79,18 @@ export class AuthService {
     // Generate token
     const token = generateToken({ id: user._id });
 
+    // Find blockchainHash from DigitalID if exists
+    let blockchainHash = undefined;
+    try {
+      const { DigitalID } = require('../user/user.model');
+      const digitalID = await DigitalID.findOne({ userId: user._id });
+      if (digitalID && digitalID.blockchainHash) {
+        blockchainHash = digitalID.blockchainHash;
+      }
+    } catch (err) {
+      // ignore, do not block login
+    }
+
     return {
       token,
       user: {
@@ -86,7 +98,8 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role
+        role: user.role,
+        blockchainHash
       }
     };
   }

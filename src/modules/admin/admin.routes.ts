@@ -1,3 +1,4 @@
+// Static admin code verification
 import express from 'express';
 import { AdminController } from './admin.controller';
 import { authenticate } from '../../middleware/auth.middleware';
@@ -5,6 +6,7 @@ import { authorize } from '../../middleware/auth.middleware';
 
 const router = express.Router();
 
+router.post('/verify-code', AdminController.verifyCode);
 // Admin registration (secured by admin code)
 router.post('/register', AdminController.register);
 

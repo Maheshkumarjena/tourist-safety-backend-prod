@@ -26,5 +26,6 @@ export interface AuthResponse {
     firstName: string;
     lastName: string;
     role: string;
+    blockchainHash?: string;
   };
 }
